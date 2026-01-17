@@ -1,52 +1,75 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
 set -euo pipefail
 
-while true; do
-  clear
-  echo -e "\e[1m"
-  echo -e " iSponsor :"
-  echo -e " -------------------"
-  echo -e "\e[0m \e[32m"
-  echo -e " 1 Route"
-  echo -e " 2 Server"
-  echo -e " 3 Fixture"
-  echo -e " 4 Schema"
-  echo -e " 5 Patch to zip"
-  echo -e " 6 Test"
-  echo -e " 7 Docker"
-  echo -e " 8 Migration"
-  echo -e " 9 Composer"
-  echo -e '\e[0m \e[1m'
-  echo -e " ------------------------"
-  echo -e "   Press Space for exit"
-  echo -e '\e[0m \e[32m'
+COMMANDING_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export COMMANDING_DIR
 
-  read -r -n 1 -s -p " Enter action number or press Space for Exit:" action
-  echo
+repo_root() {
+  git rev-parse --show-toplevel 2>/dev/null || true
+}
 
-  trimmed_action=$(echo "$action" | xargs)
+banner() {
+  printf '%s\n' "Commanding"
+  local root
+  root="$(repo_root)"
+  if [ -n "${root:-}" ]; then
+    printf '%s\n' "Repo: $root"
+  else
+    printf '%s\n' "Repo: not resolved"
+  fi
+  printf '\n'
+}
 
-  if [ -z "$trimmed_action" ]; then
-    echo "Bye"
+print_menu() {
+  printf '%s\n' " 1 Route        |"
+  printf '%s\n' " 2 Server       |"
+  printf '%s\n' " 3 Fixture      |"
+  printf '%s\n' " 4 Schema       |"
+  printf '%s\n' " 5 Patch to zip |"
+  printf '%s\n' " 6 Test         |"
+  printf '%s\n' " 7 Docker       |"
+  printf '%s\n' " 8 Migration    |  g) Git    "
+  printf '%s\n' " 9 Composer     |  c) Cache  "
+  printf '%s\n' " 0 Exit         |  r) Repeat "
+  printf '%s\n' "                |  l) Log     "
+  printf '%s\n' " ----------------------------"
+  printf '%s\n' " Empty/space = exit"
+}
+
+dispatch() {
+  local line="${1:-}"
+
+  if [[ "$line" =~ ^[[:space:]]*$ ]]; then
     exit 0
   fi
 
-  case $trimmed_action in
-    1) exec ./sh/route.sh ;;
-    2) exec ./sh/server.sh ;;
-    3) exec ./sh/fixture.sh ;;
-    4) exec ./sh/schema.sh ;;
-    5) exec ./sh/patch_ziper.sh ;;
-    6) exec ./sh/test.sh ;;
-    7) exec ./sh/docker.sh ;;
-    8) exec ./sh/migration.sh ;;
-    9) exec ./sh/composer.sh ;;
-    *) echo "Unknown choice"; sleep 1 ;;
+  case "$line" in
+    0) exit 0 ;;
   esac
 
-  # shellcheck disable=SC2181
-  if [ $? -ne 0 ]; then
-    # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-    exec bash
+  if [[ "$line" =~ ^[0-9]+$ ]]; then
+    exec bash "$COMMANDING_DIR/run.sh" chain "$line"
   fi
-done
+
+  exec bash "$COMMANDING_DIR/run.sh" "$line"
+}
+
+main() {
+  # allow: ./menu.sh 6  |  ./menu.sh 1332  |  ./menu.sh g
+  if [ $# -ge 1 ]; then
+    dispatch "$1"
+  fi
+
+  while true; do
+    clear
+    banner
+    print_menu
+    printf '%s' "Select: "
+    read -r line || true
+    printf '\n'
+    dispatch "${line:-}"
+  done
+}
+
+main "$@"
