@@ -44,7 +44,7 @@ while true; do
     ;;
   0)
     echo -e "Go back to main menu"
-    source ./sh/commanding.sh
+    source ./sh/menu.sh
     ;;
   *) echo -e "\e[31m Incorrect\e[0m" ;;
   esac
