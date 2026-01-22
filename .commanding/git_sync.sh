@@ -16,5 +16,5 @@ case $action in
   1) exec git pull origin master ;;
   2) exec git pull --rebase origin master ;;
   3) exec git push origin master ;;
-  *) echo "Bye"; exit 0 ;;
+  *) echo "Bye"; return 1 ;;
 esac

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_FILE="logs/actions.log"
-ERR_FILE="logs/errors.log"
+LOG_FILE="logs/action.log"
+ERR_FILE="logs/error.log"
 mkdir -p logs
 
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')

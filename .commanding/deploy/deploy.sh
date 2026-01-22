@@ -14,5 +14,5 @@ echo
 case $action in
   1) echo "Deploying to staging..." && exec git push origin develop ;;
   2) echo "Deploying to production..." && exec git push origin main ;;
-  *) echo "Bye"; exit 0 ;;
+  *) echo "Bye"; return 1 ;;
 esac

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_FILE="logs/actions.log"
-ERR_FILE="logs/errors.log"
+LOG_FILE="logs/action.log"
+ERR_FILE="logs/error.log"
 mkdir -p logs
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 EXIT_CODE=0
@@ -20,13 +20,15 @@ echo
 
 case $action in
   1) echo "[$timestamp] Composer install" >> "$LOG_FILE"
-     composer install 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
+  composer install 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   2) echo "[$timestamp] Composer update" >> "$LOG_FILE"
-     composer update 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
+  composer update 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   3) echo "[$timestamp] Composer dump-autoload" >> "$LOG_FILE"
-     composer dump-autoload 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
+  composer dump-autoload 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
+  0) echo -e "Go back to main menu"
+  exit 0;;
   *) echo "[$timestamp] Exit from Composer menu" >> "$LOG_FILE"
-     echo "Bye"; exit 0 ;;
+  echo "Bye"; return 1 ;;
 esac
 
 echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"

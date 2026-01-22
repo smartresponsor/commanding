@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_FILE="logs/actions.log"
-ERR_FILE="logs/errors.log"
+LOG_FILE="logs/action.log"
+ERR_FILE="logs/error.log"
 mkdir -p logs
 
 clear
-echo "Local CI Runner"
-echo "----------------"
-echo "1) PHPStan"
-echo "2) Container lint"
-echo "3) Schema validate"
-echo "4) Twig/YAML lint"
-echo "5) PHPUnit (all)"
-echo "6) PHPUnit with coverage"
-echo "Space) Exit"
+printf '%s\n' "Local CI Runner"
+printf '%s\n' "------------------------"
+printf '%s\n' "1 PHPStan"
+printf '%s\n' "2 Container lint"
+printf '%s\n' "3 Schema validate"
+printf '%s\n' "4 Twig/YAML lint"
+printf '%s\n' "5 PHPUnit (all)"
+printf '%s\n' "6 PHPUnit with coverage"
+printf '%s\n' "Space Exit"
 
 read -r -n 1 -s -p "Choice: " action
 echo
@@ -37,7 +37,7 @@ case $action in
   6) echo "[$timestamp] PHPUnit with coverage" >> "$LOG_FILE"
      vendor/bin/phpunit --coverage-text 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   *) echo "[$timestamp] Exit from Local CI menu" >> "$LOG_FILE"
-     echo "Bye"; exit 0 ;;
+     echo "Bye"; return 1 ;;
 esac
 
 echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"

@@ -52,13 +52,12 @@ while true; do
     ;;
   0)
     echo -e "Go back to main menu"
-    source ./sh/menu.sh
+    exit 0;
     ;;
 
   *) echo -e "\e[31m Incorrect\e[0m" ;;
   esac
   if [ $? -ne 0 ]; then
-    # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-    exec bash
+    continue
   fi
 done

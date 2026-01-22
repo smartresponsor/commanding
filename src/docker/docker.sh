@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_FILE="logs/actions.log"
-ERR_FILE="logs/errors.log"
+LOG_FILE="logs/action.log"
+ERR_FILE="logs/error.log"
 mkdir -p logs
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 EXIT_CODE=0
@@ -26,7 +26,7 @@ case $action in
   3) echo "[$timestamp] Docker logs" >> "$LOG_FILE"
      docker-compose logs -f 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   *) echo "[$timestamp] Exit from Docker menu" >> "$LOG_FILE"
-     echo "Bye"; exit 0 ;;
+     echo "Bye"; return 1 ;;
 esac
 
 echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"

@@ -1,39 +1,45 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+
+# Load Git Bash environment (colors/prompt) BEFORE strict mode
+[ -f /etc/profile ] && . /etc/profile
+[ -f ~/.bashrc ] && . ~/.bashrc
 set -euo pipefail
 
 COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"}"
-SCRIPT_DIR="$COMMANDING_DIR/sh"
-MENU="$COMMANDING_DIR/menu.sh"
+export COMMANDING_DIR
 
-back_to_menu() {
+COMMANDING_SH_DIR="$COMMANDING_DIR/sh"
+COMMANDING="$COMMANDING_DIR/commanding.sh"
+
+pause() {
   read -r -p "Press Enter to continue..." _ || true
-  exec bash "$MENU"
+  return 0
 }
 
-fail_to_menu() {
+fail() {
   printf '%s\n' "${1:-Error}"
-  back_to_menu
+  pause
+  return 0
 }
 
 resolve_script() {
-  local token="${1:-}"
+  local action="${1:-}"
 
-  case "$token" in
-    1) printf '%s' "$SCRIPT_DIR/route.sh" ;;
-    2) printf '%s' "$SCRIPT_DIR/server.sh" ;;
-    3) printf '%s' "$SCRIPT_DIR/fixture.sh" ;;
-    4) printf '%s' "$SCRIPT_DIR/schema.sh" ;;
-    5) printf '%s' "$SCRIPT_DIR/patch_zipper.sh" ;;
-    6) printf '%s' "$SCRIPT_DIR/test.sh" ;;
-    7) printf '%s' "$SCRIPT_DIR/docker.sh" ;;
-    8) printf '%s' "$SCRIPT_DIR/migration.sh" ;;
-    9) printf '%s' "$SCRIPT_DIR/composer.sh" ;;
-    g|G) printf '%s' "$SCRIPT_DIR/git.sh" ;;
-    l|L) printf '%s' "$SCRIPT_DIR/log.sh" ;;
-    w|W) printf '%s' "$SCRIPT_DIR/worker.sh" ;;
-    c|C) printf '%s' "$SCRIPT_DIR/cache.sh" ;;
-    r|R) printf '%s' "$SCRIPT_DIR/repeat.sh" ;;
+  case "$action" in
+    1) printf "%s" "$COMMANDING_SH_DIR/route.sh" ;;
+    2) printf "%s" "$COMMANDING_SH_DIR/server.sh" ;;
+    3) printf "%s" "$COMMANDING_SH_DIR/fixture.sh" ;;
+    4) printf "%s" "$COMMANDING_SH_DIR/schema.sh" ;;
+    5) printf "%s" "$COMMANDING_DIR/patch_zipper.sh" ;;
+    6) printf "%s" "$COMMANDING_SH_DIR/test.sh" ;;
+    7) printf "%s" "$COMMANDING_SH_DIR/docker.sh" ;;
+    8) printf "%s" "$COMMANDING_SH_DIR/migration.sh" ;;
+    9) printf "%s" "$COMMANDING_SH_DIR/composer.sh" ;;
+    g|G) printf "%s" "$COMMANDING_DIR/git/commanding.sh" ;;
+    l|L) printf "%s" "$COMMANDING_SH_DIR/log.sh" ;;
+    c|C) printf "%s" "$COMMANDING_SH_DIR/cache.sh" ;;
+    d|D) printf "%s" "$COMMANDING_SH_DIR/dot.sh" ;;
     *) return 1 ;;
   esac
 }
@@ -64,36 +70,42 @@ run_short() {
     printf '\n%s\n' "Command failed (exit=$status)"
   fi
 
-  back_to_menu
+  pause
+  return 0
 }
 
 run_long() {
   local target="$1"; shift || true
-  exec bash "$target" "$@"
+  bash "$target" "$@" || true
+  return 0
 }
 
 single() {
-  local token="${1:-}"; shift || true
+  local action="${1:-}"; shift || true
   local target
 
-  if ! target="$(resolve_script "$token")"; then
-    fail_to_menu "Unknown input: $token"
+  if ! target="$(resolve_script "$action")"; then
+    fail "Unknown input: $action"
+    return 0
   fi
 
   if ! ensure_target "$target"; then
-    fail_to_menu "Script not found: $target"
+    fail "Script not found: $target"
+    return 0
   fi
 
-  if is_long_running "$token"; then
+  if is_long_running "$action"; then
     run_long "$target" "$@"
   else
     run_short "$target" "$@"
   fi
+
+  return 0
 }
 
 chain() {
   local digits="${1:-}"
-  [ -n "$digits" ] || fail_to_menu "Empty chain"
+  [ -n "$digits" ] || fail "Empty chain"
 
   local i ch target status
   local len="${#digits}"
@@ -102,19 +114,23 @@ chain() {
     ch="${digits:i:1}"
 
     if [[ "$ch" == "0" ]]; then
-      exec bash "$MENU"
+      # stop chain and return to menu
+      return 0
     fi
 
     if [[ ! "$ch" =~ ^[0-9]$ ]]; then
-      fail_to_menu "Invalid chain token: $ch"
+      fail "Invalid chain action: $ch"
+      return 0
     fi
 
     if ! target="$(resolve_script "$ch")"; then
-      fail_to_menu "Unknown chain step: $ch"
+      fail "Unknown chain step: $ch"
+      return 0
     fi
 
     if ! ensure_target "$target"; then
-      fail_to_menu "Script not found: $target"
+      fail "Script not found: $target"
+      return 0
     fi
 
     set +e
@@ -124,11 +140,13 @@ chain() {
 
     if [ $status -ne 0 ]; then
       printf '\n%s\n' "Chain step failed (step=$ch, exit=$status)"
-      back_to_menu
+      pause
+      return 0
     fi
   done
 
-  back_to_menu
+  pause
+  return 0
 }
 
 main() {

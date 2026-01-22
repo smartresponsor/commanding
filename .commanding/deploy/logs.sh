@@ -14,5 +14,5 @@ echo
 case $action in
   1) exec symfony server:log ;;
   2) exec docker-compose logs -f ;;
-  *) echo "Bye"; exit 0 ;;
+  *) echo "Bye"; return 1 ;;
 esac

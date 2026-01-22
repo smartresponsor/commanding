@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOG_FILE="logs/actions.log"
+LOG_FILE="logs/action.log"
 mkdir -p logs
 
 clear
@@ -10,7 +10,7 @@ echo "--------------"
 
 if [ ! -f "$LOG_FILE" ]; then
   echo "Лог пока пуст."
-  exit 0
+  return 1
 fi
 
 # Показать последние 50 строк
@@ -24,8 +24,8 @@ read -r -n 1 -s action
 echo
 
 case $action in
-  "")  exit 0 ;;   # Enter → просто выход
-  " ") exit 0 ;;   # Space → выход
+  "")  return 1 ;;   # Enter → просто выход
+  " ") return 1 ;;   # Space → выход
   "C"|"c")
        cat "$LOG_FILE" | xclip -selection clipboard 2>/dev/null || \
        cat "$LOG_FILE" | pbcopy 2>/dev/null || \

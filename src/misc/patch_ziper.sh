@@ -16,5 +16,6 @@ echo "Created archive: $ZIP_NAME"
 
   if [ $? -ne 0 ]; then
     # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-    exec bash
+    bash || true
+    return 0
   fi
