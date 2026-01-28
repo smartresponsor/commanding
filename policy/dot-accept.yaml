@@ -1,0 +1,14 @@
+# Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# dot-accept.yaml
+# Whitelist of dot-folders allowed to run via .commanding/sh/dot.sh
+#
+# Rules:
+# - Use dot-folder names (start with '.')
+# - Order matters only for readability
+# - If a folder exists but has no run.* => will be reported as NONRUN
+#
+accept:
+  - .smoke
+  - .gate
+  - .release
+  - .tool

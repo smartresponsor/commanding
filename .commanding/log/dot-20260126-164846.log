@@ -1,0 +1,15 @@
+DOT root=/d/PhpstormProjects/www/Commanding time=20260126-164846
+DOT-FOLDER: /d/PhpstormProjects/www/Commanding/.commanding
+PRIMARY : sh -> /d/PhpstormProjects/www/Commanding/.commanding/run.sh
+
+============================================================
+START  runner=sh  file=/d/PhpstormProjects/www/Commanding/.commanding/run.sh
+CWD    /d/PhpstormProjects/www/Commanding/.commanding
+TIME   20260126-164846
+------------------------------------------------------------
+Unknown input: 
+------------------------------------------------------------
+END    runner=sh  rc=0
+TIME   20260126-164848
+============================================================
+
