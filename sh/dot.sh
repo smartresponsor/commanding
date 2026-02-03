@@ -68,14 +68,14 @@ run_entry() {
 main() {
   local root
   root="$(repo_root)"
-  [ -n "${root:-}" ] || { ui_clear; ui_banner "Dot"; printf '%s\n' "Repo not detected."; exit 0; }
+  [ -n "${root:-}" ] || { ui_clear; ui_banner "Dot"; printf '%s\n' "Repo not detected."; return 0 2>/dev/null || exit 0; }
 
   mapfile -t accept < <(parse_accept_list || true)
   if [ "${#accept[@]}" -eq 0 ]; then
     ui_clear
     ui_banner "Dot"
     printf '%s\n' "No accepted dot-folders in policy."
-    exit 0
+    return 0 2>/dev/null || exit 0
   fi
 
   # collect existing
@@ -100,8 +100,8 @@ main() {
       printf '%s\n' ""
       printf '%s\n' "q) Back"
       key="$(ui_pick_key)"
-      [ -z "${key:-}" ] && exit 0
-      [[ "${key}" =~ [qQ] ]] && exit 0
+      [ -z "${key:-}" ] && return 0 2>/dev/null || exit 0
+      [[ "${key}" =~ [qQ] ]] && return 0 2>/dev/null || exit 0
       continue
     fi
 
@@ -126,7 +126,7 @@ main() {
     key="$(ui_pick_key)"
     printf '\n'
 
-    [ -z "${key:-}" ] && exit 0
+    [ -z "${key:-}" ] && return 0 2>/dev/null || exit 0
 
     case "$key" in
       a|A)
@@ -148,7 +148,7 @@ main() {
         done
         ;;
       q|Q)
-        exit 0
+        return 0 2>/dev/null || exit 0
         ;;
       [1-9])
         sel=$((key-1))

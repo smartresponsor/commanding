@@ -13,10 +13,11 @@ while true; do
 
   read -r -n 1 -s -p " Enter action number or press Space for Exit:" action
 
-  trimmed_action=$(echo $action | xargs)
+  trimmed_action=$(printf '%s' "$action" | xargs)
 
   if [ -z "$trimmed_action" ]; then
-    bash
+    bash "$COMMANDING_DIR/commanding.sh" || true
+    return 0 2>/dev/null || exit 0
   fi
 
   case $action in
@@ -27,13 +28,13 @@ while true; do
   2)
     echo -e "    Check Route access by routeName (guest access)..."
     read -p "    Enter Route Name: " routeName
-    php bin/console debug:router --format=md --show-controllers $routeName
+    php bin/console debug:router --format=md --show-controllers "$routeName"
     ;;
   3)
     echo -e "    Check Route access by routeName and user..."
     read -p "    Enter Route Name: " routeName
     read -p "    Enter User Name: " userName
-    php bin/console debug:router --format=md --show-controllers $routeName $userName
+    php bin/console debug:router --format=md --show-controllers "$routeName" "$userName"
     ;;
   4)
     echo ''
@@ -48,12 +49,13 @@ while true; do
   0)
     echo -e "Go back to main menu"
     bash "$COMMANDING_DIR/commanding.sh" || true
-    return 0
+    return 0 2>/dev/null || exit 0
     ;;
   *) echo -e "\e[31m Incorrect\e[0m" ;;
   esac
     if [ $? -ne 0 ]; then
       # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-    exec bash
+      bash "$COMMANDING_DIR/commanding.sh" || true
+      return 0 2>/dev/null || exit 0
     fi
 done

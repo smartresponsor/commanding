@@ -25,21 +25,21 @@ printf '\n'
 
 case "${key:-}" in
   1)
-    [ -n "${current_branch:-}" ] || exit 0
+    [ -n "${current_branch:-}" ] || return 0 2>/dev/null || exit 0
     exec git push origin "${current_branch}"
     ;;
   2)
     exec git push origin master
     ;;
   3)
-    [ -n "${current_branch:-}" ] || exit 0
+    [ -n "${current_branch:-}" ] || return 0 2>/dev/null || exit 0
     exec git push --tags origin "${current_branch}"
     ;;
   ""|0|q|Q)
-    exit 0
+    return 0 2>/dev/null || exit 0
     ;;
   *)
     printf '%s\n' "Unknown."
-    exit 0
+    return 0 2>/dev/null || exit 0
     ;;
 esac
