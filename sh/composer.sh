@@ -8,12 +8,10 @@ export COMMANDING_DIR
 # shellcheck source=/dev/null
 source "$COMMANDING_DIR/lib/ui.sh"
 
-#!/usr/bin/env bash
-set -euo pipefail
-
-LOG_FILE="logs/action.log"
-ERR_FILE="logs/error.log"
-mkdir -p logs
+LOG_DIR="$COMMANDING_DIR/logs"
+LOG_FILE="$LOG_DIR/actions.log"
+ERR_FILE="$LOG_DIR/errors.log"
+mkdir -p "$LOG_DIR"
 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 EXIT_CODE=0
 
@@ -37,7 +35,7 @@ case $action in
   3) echo "[$timestamp] Composer dump-autoload" >> "$LOG_FILE"
      composer dump-autoload 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   *) echo "[$timestamp] Exit from Composer menu" >> "$LOG_FILE"
-     exit 0 ;;
+     return 0 2>/dev/null || exit 0 ;;
 esac
 
 echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"

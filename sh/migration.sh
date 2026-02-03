@@ -18,10 +18,11 @@ while true; do
 
   read -r -n 1 -s -p " Enter action number or press Space for Exit:" action
 
-  trimmed_action=$(echo $action | xargs)
+  trimmed_action=$(printf '%s' "$action" | xargs)
 
   if [ -z "$trimmed_action" ]; then
-    bash
+    bash "$COMMANDING_DIR/commanding.sh" || true
+    return 0 2>/dev/null || exit 0
   fi
 
   case $action in
@@ -46,12 +47,12 @@ while true; do
   5)
     echo -e "Execute specific migration. Enter the migration name"
     read -p 'Enter migration version: ' version
-    php bin/console doctrine:migrations:execute $version
+    php bin/console doctrine:migrations:execute "$version"
     ;;
   0)
     echo -e "Go back to main menu"
     bash "$COMMANDING_DIR/commanding.sh" || true
-    return 0
+    return 0 2>/dev/null || exit 0
     ;;
   *)
     echo -e "\e[31m Incorrect\e[0m"
@@ -60,6 +61,7 @@ while true; do
   esac
   if [ $? -ne 0 ]; then
     # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-      bash || true
+    bash "$COMMANDING_DIR/commanding.sh" || true
+    return 0 2>/dev/null || exit 0
   fi
 done

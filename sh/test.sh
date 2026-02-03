@@ -8,12 +8,10 @@ export COMMANDING_DIR
 # shellcheck source=/dev/null
 source "$COMMANDING_DIR/lib/ui.sh"
 
-#!/usr/bin/env bash
-set -euo pipefail
-
-LOG_FILE="logs/action.log"
-ERR_FILE="logs/error.log"
-mkdir -p logs
+LOG_DIR="$COMMANDING_DIR/logs"
+LOG_FILE="$LOG_DIR/actions.log"
+ERR_FILE="$LOG_DIR/errors.log"
+mkdir -p "$LOG_DIR"
 
 ui_clear
 ui_banner "Test"
@@ -41,7 +39,7 @@ case $action in
   4) echo "[$timestamp] Running Full suite" >> "$LOG_FILE"
      vendor/bin/phpunit 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
   *) echo "[$timestamp] Exit from Test menu" >> "$LOG_FILE"
-     exit 0 ;;
+     return 0 2>/dev/null || exit 0 ;;
 esac
 
 echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"

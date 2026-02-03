@@ -8,9 +8,6 @@ export COMMANDING_DIR
 # shellcheck source=/dev/null
 source "$COMMANDING_DIR/lib/ui.sh"
 
-#!/usr/bin/env bash
-set -euo pipefail
-
 ui_clear
 ui_banner "Log"
 echo "Logs Menu"
@@ -25,5 +22,5 @@ echo
 case $action in
   1) exec symfony server:log ;;
   2) exec docker compose logs -f ;;
-  *) exit 0 ;;
+  *) return 0 2>/dev/null || exit 0 ;;
 esac
