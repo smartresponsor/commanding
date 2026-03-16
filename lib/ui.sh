@@ -61,10 +61,11 @@ action_log_file() {
 json_escape() {
   local value="${1:-}"
   value=${value//\/\\}
-  value=${value//"/\"}
+  value=${value//\"/\\\"}
   value=${value//$'
 '/\n}
-  value=${value//$''/\r}
+  value=${value//$'
+'/\r}
   value=${value//$'	'/\t}
   printf '%s' "$value"
 }
@@ -185,7 +186,8 @@ ui_pick_key() {
   local k=""
   IFS= read -rsn1 k 2>/dev/null || true
   if [[ "$k" == $'
-' || "$k" == $'' || "$k" == ' ' ]]; then
+' || "$k" == $'
+' || "$k" == ' ' ]]; then
     printf ''
     return 0
   fi

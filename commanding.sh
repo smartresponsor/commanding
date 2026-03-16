@@ -50,34 +50,28 @@ self_check() {
 print_menu() {
   ui_clear
   ui_banner "Commanding"
-  printf '%s
-' ' 1) Route        6) Test          d) Dot'
-  printf '%s
-' ' 2) Server       7) Docker        g) Git'
-  printf '%s
-' ' 3) Fixture      8) Migration     c) Cache'
-  printf '%s
-' ' 4) Schema       9) Composer      l) Log'
-  printf '%s
-' ' 5) Patch (zip)  i) Inspection'
-  printf '
-'
-  printf '%s
-' ' 0) Exit'
-  printf '%s
-' ' r) Refresh'
-  printf '%s
-' ' -------------------------------'
-  printf '%s
-' ' Empty/space = exit'
+  printf '%s\n' ' 1) Route        6) Test          d) Dot'
+  printf '%s\n' ' 2) Server       7) Docker        g) Git'
+  printf '%s\n' ' 3) Fixture      8) Migration     c) Cache'
+  printf '%s\n' ' 4) Schema       9) Composer      l) Log'
+  printf '%s\n' ' 5) Patch (zip)  i) Inspection'
+  printf '\n'
+  printf '%s\n' ' 0) Exit'
+  printf '%s\n' ' r) Refresh'
+  printf '%s\n' ' -------------------------------'
+  printf '%s\n' ' Empty/space = exit'
 }
 
 read_choice() {
   local first='' k='' buf=''
+
+  if [ ! -t 0 ]; then
+    return 1
+  fi
+
   IFS= read -rsn1 first 2>/dev/null || return 1
 
-  if [[ "$first" == $'
-' || "$first" == $'' || "$first" == ' ' ]]; then
+  if [[ "$first" == $'\n' || "$first" == $'\r' || "$first" == ' ' ]]; then
     printf ''
     return 0
   fi
@@ -89,8 +83,7 @@ read_choice() {
         buf+="$k"
         continue
       fi
-      if [[ "$k" == $'
-' || "$k" == $'' ]]; then
+      if [[ "$k" == $'\n' || "$k" == $'\r' ]]; then
         break
       fi
       break
@@ -130,9 +123,7 @@ menu_loop() {
 
     local line=''
     line="$(read_choice || true)"
-    printf '
-
-'
+    printf '\n\n'
 
     dispatch "$line" || break
   done
@@ -150,6 +141,11 @@ main() {
   if [ $# -ge 1 ]; then
     dispatch "$1" || true
     return 0
+  fi
+
+  if [ ! -t 0 ]; then
+    printf '%s\n' 'Commanding requires an interactive terminal.'
+    return 1
   fi
 
   menu_loop
