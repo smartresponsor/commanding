@@ -1,57 +1,93 @@
-while true; do
-  clear
-  echo -e "\e[1m"
-  echo -e " Fixture setCycle:"
-  echo -e " -------------------"
-  echo -e "\e[0m \e[32m"
-  echo -e " 1 Fixture PowerCycle"
-  echo -e " 2 Append new Fixture"
-  echo -e " 3 Profile avatars downloader"
-  echo -e '\e[0m \e[1m'
-  echo -e " ------------------------"
-  echo -e " 0 Exit to main menu... "
-  echo -e '\e[0m \e[32m'
+#!/usr/bin/env bash
+# Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
+set -euo pipefail
 
-  read -r -n 1 -s -p " Enter action number or press Space for Exit:" action
+COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"}"
+export COMMANDING_DIR
 
-  trimmed_action=$(echo $action | xargs)
+# shellcheck source=/dev/null
+source "$COMMANDING_DIR/lib/ui.sh"
 
-  if [ -z "$trimmed_action" ]; then
-    bash
+PROJECT_ROOT="$(detect_project_root)"
+CONSOLE_BIN="$PROJECT_ROOT/bin/console"
+
+require_command php || exit 1
+require_file "$CONSOLE_BIN" || exit 1
+
+run_console() {
+  local label="$1"
+  shift
+
+  run_logged "$label" php "$CONSOLE_BIN" "$@"
+}
+
+load_fixture_replace() {
+  ui_warn "This action truncates current fixture data before reloading."
+  if ! ui_confirm "Continue with fixture replace load? [y/N]: "; then
+    ui_note "Cancelled."
+    return 0
   fi
 
-  case $action in
-  1)
-    echo -e "Fixture Restarting..."
-    symfony console doctrine:fixtures:load --purge-with-truncate --no-interaction
-    ;;
-  2)
-    echo -e "Fixture append..."
-    symfony console doctrine:fixtures:load --append --no-interaction
-    ;;
+  run_console "Fixture load --replace" doctrine:fixtures:load --purge-with-truncate --no-interaction
+}
 
-  3)
-    echo 'Profile avatars downloading process... Input the Count of avatars'
-    read COUNT
+load_fixture_append() {
+  run_console "Fixture load --append" doctrine:fixtures:load --append --no-interaction
+}
 
-    if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
-      echo -e "\e[31m Incorrect\e[0m"
-      exit 1
-    fi
+run_avatar_download() {
+  local count=""
+  read -r -p "Avatar count: " count || true
 
-    php bin/console app:avatar-download --count=$COUNT
-    ;;
+  if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -le 0 ]; then
+    ui_error "Avatar count must be a positive integer."
+    return 1
+  fi
 
-  0)
-    echo -e "Go back to main menu"
-    bash "$COMMANDING_DIR/commanding.sh" || true
-    return 0
-    ;;
+  run_console "Avatar download --count=$count" app:avatar-download --count="$count"
+}
 
-  *) echo -e "\e[31m Incorrect\e[0m" ;;
+while true; do
+  ui_clear
+  ui_banner "Fixture"
+
+  printf '%s\n' "Fixture Menu"
+  printf '%s\n' "------------"
+  printf '%s\n' "1) Replace fixture data"
+  printf '%s\n' "2) Append fixture data"
+  printf '%s\n' "3) Download profile avatars"
+  printf '%s\n' "4) Open action log"
+  printf '%s\n' ""
+  printf '%s\n' "Space) Exit"
+  printf '%s'   "Choice: "
+
+  action="$(ui_pick_key)"
+  printf '\n'
+
+  exit_code=0
+
+  case "${action:-}" in
+    1)
+      load_fixture_replace || exit_code=$?
+      ;;
+    2)
+      load_fixture_append || exit_code=$?
+      ;;
+    3)
+      run_avatar_download || exit_code=$?
+      ;;
+    4)
+      show_file "$(runtime_log_file)" || exit_code=$?
+      ;;
+    ""|0|q|Q)
+      exit 0
+      ;;
+    *)
+      ui_warn "Unknown action."
+      ;;
   esac
-    if [ $? -ne 0 ]; then
-      # read -p "Произошла ошибка. Нажмите Enter для продолжения."
-    exec bash
-    fi
-done
+
+  ui_note "Exit code: $exit_code"
+  ui_pause_any
+ done

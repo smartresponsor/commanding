@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
 set -euo pipefail
 
 COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"}"
@@ -8,41 +9,127 @@ export COMMANDING_DIR
 # shellcheck source=/dev/null
 source "$COMMANDING_DIR/lib/ui.sh"
 
-#!/usr/bin/env bash
-set -euo pipefail
-
-LOG_FILE="logs/action.log"
-ERR_FILE="logs/error.log"
-mkdir -p logs
-
-ui_clear
-ui_banner "Test"
-echo "Tests Menu"
-echo "----------"
-echo "1) Unit tests"
-echo "2) Integration tests"
-echo "3) E2E tests"
-echo "4) Full suite (all)"
-echo "Space) Exit"
-
-read -r -n 1 -s -p "Choice: " action
-echo
-
-timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+PROJECT_ROOT="$(detect_project_root)"
 EXIT_CODE=0
 
-case $action in
-  1) echo "[$timestamp] Running Unit tests" >> "$LOG_FILE"
-     vendor/bin/phpunit --testsuite=unit 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
-  2) echo "[$timestamp] Running Integration tests" >> "$LOG_FILE"
-     vendor/bin/phpunit --testsuite=integration 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
-  3) echo "[$timestamp] Running E2E tests" >> "$LOG_FILE"
-     vendor/bin/phpunit --testsuite=e2e 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
-  4) echo "[$timestamp] Running Full suite" >> "$LOG_FILE"
-     vendor/bin/phpunit 2>>"$ERR_FILE" || EXIT_CODE=$? ;;
-  *) echo "[$timestamp] Exit from Test menu" >> "$LOG_FILE"
-     exit 0 ;;
-esac
+require_test_runtime() {
+  if ! command_exists php; then
+    ui_error "PHP is not available in PATH"
+    return 1
+  fi
 
-echo "[$timestamp] Exit code: $EXIT_CODE" >> "$LOG_FILE"
-exit $EXIT_CODE
+  if [ ! -f "$PROJECT_ROOT/vendor/bin/phpunit" ]; then
+    ui_error "vendor/bin/phpunit not found. Run composer install first."
+    return 1
+  fi
+
+  return 0
+}
+
+smoke_check() {
+  local as_json=0
+  [ "${1:-}" = "--json" ] && as_json=1
+  local detail="test runtime ready"
+  if ! require_test_runtime; then
+    detail="phpunit runtime not available"
+    if [ $as_json -eq 1 ]; then
+      emit_json_result fail test.sh "$detail"
+    else
+      ui_error "$detail"
+    fi
+    return 1
+  fi
+
+  if [ $as_json -eq 1 ]; then
+    emit_json_result ok test.sh "$detail"
+  else
+    ui_note "$detail"
+  fi
+}
+
+run_test_action() {
+  local label="$1"
+  shift || true
+  run_logged "$label" "$@" || EXIT_CODE=$?
+}
+
+unit_test() {
+  ui_note "Running unit test suite..."
+  run_test_action "PHPUnit unit suite" vendor/bin/phpunit --testsuite=unit
+}
+
+integration_test() {
+  ui_note "Running integration test suite..."
+  run_test_action "PHPUnit integration suite" vendor/bin/phpunit --testsuite=integration
+}
+
+e2e_test() {
+  ui_note "Running e2e test suite..."
+  run_test_action "PHPUnit e2e suite" vendor/bin/phpunit --testsuite=e2e
+}
+
+full_test() {
+  ui_note "Running full PHPUnit suite..."
+  run_test_action "PHPUnit full suite" vendor/bin/phpunit
+}
+
+open_test_log() {
+  show_file "$(action_log_file)"
+}
+
+print_menu() {
+  ui_clear
+  ui_banner "Test"
+  printf '%s
+' "Tests Menu"
+  printf '%s
+' "----------"
+  printf '%s
+' "1) Unit tests"
+  printf '%s
+' "2) Integration tests"
+  printf '%s
+' "3) E2E tests"
+  printf '%s
+' "4) Full suite"
+  printf '%s
+' "5) Open action log"
+  printf '%s
+' "Space) Exit"
+}
+
+main() {
+  case "${1:-}" in
+    --smoke)
+      shift || true
+      smoke_check "$@"
+      exit $?
+      ;;
+  esac
+
+  if ! require_test_runtime; then
+    ui_pause_any
+    exit 0
+  fi
+
+  print_menu
+  read -r -n 1 -s -p "Choice: " action
+  printf '
+'
+
+  case "${action:-}" in
+    1) unit_test ;;
+    2) integration_test ;;
+    3) e2e_test ;;
+    4) full_test ;;
+    5) open_test_log; exit 0 ;;
+    *) exit 0 ;;
+  esac
+
+  printf '%s
+' "Exit code: ${EXIT_CODE}"
+  ui_pause_any
+  exit 0
+}
+
+main "$@"

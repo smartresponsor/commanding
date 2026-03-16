@@ -1,0 +1,25 @@
+version: '3.9'
+
+volumes:
+  minio-data:
+    name: '${SR_COMPOSE_PROJECT:-sr}-minio-data'
+
+services:
+  object-minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${SR_MINIO_USER:-app}
+      MINIO_ROOT_PASSWORD: ${SR_MINIO_PASS:-appappapp}
+      TZ: ${SR_TZ:-America/Chicago}
+    command: ['server', '/data', '--console-address', ':9001']
+    ports:
+      - '${SR_MINIO_PORT:-9000}:9000'
+      - '${SR_MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20

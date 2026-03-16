@@ -1,0 +1,42 @@
+name: automate-kit-sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *" # daily
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Automater script path
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:GITHUB_WORKSPACE/.automation/tool/automater-pack-sync.ps1",
+            "$env:GITHUB_WORKSPACE/consumer-src/.automation/tool/automater-pack-sync.ps1"
+          )
+          $found = $null
+          foreach ($p in $candidates) {
+            if (Test-Path -LiteralPath $p) { $found = $p; break }
+          }
+          if (-not $found) {
+            Write-Host "pwd:"; pwd
+            Write-Host "ls root:"; Get-ChildItem -Force $env:GITHUB_WORKSPACE | Format-Table -AutoSize
+            Write-Error "automater-pack-sync.ps1 not found"
+          }
+          "AUTOMATER_SCRIPT=$found" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "AUTOMATER_SCRIPT=$found"
+
+      - name: Automater pack sync
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          & $env:AUTOMATER_SCRIPT -OnlyId "automate-kit"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
 set -euo pipefail
 
 COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"}"
@@ -8,38 +9,91 @@ export COMMANDING_DIR
 # shellcheck source=/dev/null
 source "$COMMANDING_DIR/lib/ui.sh"
 
-ui_clear
-ui_banner "Deploy"
+PROJECT_ROOT="$(detect_project_root)"
 
-current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+require_command git || exit 1
 
-printf '%s\n' "1) Push current branch (${current_branch:-unknown})"
-printf '%s\n' "2) Push origin/master"
-printf '%s\n' "3) Push with tags (current branch)"
-printf '%s\n' ""
-printf '%s\n' "Space) Exit"
-printf '%s'   "Choice: "
+current_branch="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+remote_name="origin"
 
-key="$(ui_pick_key)"
-printf '\n'
+push_branch() {
+  local branch_name="$1"
+  [ -n "$branch_name" ] || {
+    ui_warn "Current branch is not resolved."
+    return 1
+  }
 
-case "${key:-}" in
-  1)
-    [ -n "${current_branch:-}" ] || exit 0
-    exec git push origin "${current_branch}"
-    ;;
-  2)
-    exec git push origin master
-    ;;
-  3)
-    [ -n "${current_branch:-}" ] || exit 0
-    exec git push --tags origin "${current_branch}"
-    ;;
-  ""|0|q|Q)
-    exit 0
-    ;;
-  *)
-    printf '%s\n' "Unknown."
-    exit 0
-    ;;
-esac
+  (
+    cd "$PROJECT_ROOT"
+    run_logged "Git push $remote_name $branch_name" git push "$remote_name" "$branch_name"
+  )
+}
+
+push_branch_with_tags() {
+  local branch_name="$1"
+  [ -n "$branch_name" ] || {
+    ui_warn "Current branch is not resolved."
+    return 1
+  }
+
+  if ! ui_confirm "Push branch '$branch_name' with tags to $remote_name? [y/N]: "; then
+    ui_note "Cancelled."
+    return 0
+  fi
+
+  (
+    cd "$PROJECT_ROOT"
+    run_logged "Git push --tags $remote_name $branch_name" git push --tags "$remote_name" "$branch_name"
+  )
+}
+
+while true; do
+  ui_clear
+  ui_banner "Deploy"
+
+  printf '%s\n' "Deploy Menu"
+  printf '%s\n' "-----------"
+  printf '%s\n' "Current branch: ${current_branch:-unknown}"
+  printf '%s\n' "Remote: $remote_name"
+  printf '%s\n' ""
+  printf '%s\n' "1) Push current branch"
+  printf '%s\n' "2) Push origin/master"
+  printf '%s\n' "3) Push current branch with tags"
+  printf '%s\n' "4) Open action log"
+  printf '%s\n' ""
+  printf '%s\n' "Space) Exit"
+  printf '%s'   "Choice: "
+
+  key="$(ui_pick_key)"
+  printf '\n'
+
+  exit_code=0
+
+  case "${key:-}" in
+    1)
+      push_branch "$current_branch" || exit_code=$?
+      ;;
+    2)
+      if ! ui_confirm "Push branch 'master' to $remote_name? [y/N]: "; then
+        ui_note "Cancelled."
+      else
+        push_branch "master" || exit_code=$?
+      fi
+      ;;
+    3)
+      push_branch_with_tags "$current_branch" || exit_code=$?
+      ;;
+    4)
+      show_file "$(runtime_log_file)" || exit_code=$?
+      ;;
+    ""|0|q|Q)
+      exit 0
+      ;;
+    *)
+      ui_warn "Unknown action."
+      ;;
+  esac
+
+  ui_note "Exit code: $exit_code"
+  ui_pause_any
+ done

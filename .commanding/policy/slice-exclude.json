@@ -1,0 +1,38 @@
+{
+  "excludeDir": [
+    ".git",
+    ".idea",
+    ".vscode",
+    "bin",
+    "vendor",
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    "coverage",
+    "var",
+    "cache",
+    "tmp",
+    "temp",
+    ".tmp",
+    ".temp",
+    ".cache",
+    ".turbo",
+    "logs",
+    "log",
+    ".gate",
+    ".gating",
+    ".commanding",
+    ".consuming",
+    ".intelligence",
+    ".release",
+    ".smoke",
+    ".canonization",
+    ".dist"
+  ],
+  "excludeExt": [
+    ".log",
+    ".tmp",
+    ".cache"
+  ]
+}

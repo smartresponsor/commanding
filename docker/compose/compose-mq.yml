@@ -1,0 +1,24 @@
+version: '3.9'
+
+volumes:
+  rabbit-data:
+    name: '${SR_COMPOSE_PROJECT:-sr}-rabbit-data'
+
+services:
+  mq-rabbit:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${SR_RABBIT_USER:-app}
+      RABBITMQ_DEFAULT_PASS: ${SR_RABBIT_PASS:-app}
+      TZ: ${SR_TZ:-America/Chicago}
+    ports:
+      - '${SR_RABBIT_PORT:-5672}:5672'
+      - '${SR_RABBIT_UI_PORT:-15672}:15672'
+    volumes:
+      - rabbit-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20

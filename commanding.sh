@@ -1,56 +1,87 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
 set -euo pipefail
 
 COMMANDING_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export COMMANDING_DIR
 
-repo_root() {
-  git rev-parse --show-toplevel 2>/dev/null || true
-}
+# shellcheck source=/dev/null
+source "$COMMANDING_DIR/lib/ui.sh"
 
-banner() {
-  printf '%s\n' ""
-  printf '%s\n' " Commanding"
+self_check() {
+  local as_json=0
+  [ "${1:-}" = "--json" ] && as_json=1
 
-  local root
-  root="$(repo_root)"
-  if [ -n "${root:-}" ]; then
-    printf '%s\n' " Repo: $root"
-  else
-    printf '%s\n' " Repo: not resolved"
+  local missing=()
+  local required=(
+    "$COMMANDING_DIR/commanding.sh"
+    "$COMMANDING_DIR/run.sh"
+    "$COMMANDING_DIR/lib/ui.sh"
+    "$COMMANDING_DIR/sh/log.sh"
+    "$COMMANDING_DIR/sh/inspection.sh"
+    "$COMMANDING_DIR/sh/cache.sh"
+    "$COMMANDING_DIR/sh/test.sh"
+  )
+
+  local path=''
+  for path in "${required[@]}"; do
+    [ -f "$path" ] || missing+=("${path#$COMMANDING_DIR/}")
+  done
+
+  if [ ${#missing[@]} -eq 0 ]; then
+    if [ $as_json -eq 1 ]; then
+      emit_json_result ok commanding "self-check passed"
+    else
+      ui_note "Commanding self-check passed."
+    fi
+    return 0
   fi
-  printf '\n'
+
+  local detail="missing: ${missing[*]}"
+  if [ $as_json -eq 1 ]; then
+    emit_json_result fail commanding "$detail"
+  else
+    ui_error "$detail"
+  fi
+  return 1
 }
 
 print_menu() {
-  printf '%s\n' " 1 Route      |"
-  printf '%s\n' " 2 Server     |"
-  printf '%s\n' " 3 Fixture    |"
-  printf '%s\n' " 4 Schema     |"
-  printf '%s\n' " 5 Patch(zip) |"
-  printf '%s\n' " 6 Test       |"
-  printf '%s\n' " 7 Docker     |  d) Dot"
-  printf '%s\n' " 8 Migration  |  g) Git"
-  printf '%s\n' " 9 Composer   |  c) Cache"
-  printf '%s\n' " 0 Exit       |  l) Log"
-  printf '%s\n' "              |  r) Repeat"
-  printf '%s\n' " --------------------------"
-  printf '%s\n' " Enter/space = exit"
+  ui_clear
+  ui_banner "Commanding"
+  printf '%s
+' ' 1) Route        6) Test          d) Dot'
+  printf '%s
+' ' 2) Server       7) Docker        g) Git'
+  printf '%s
+' ' 3) Fixture      8) Migration     c) Cache'
+  printf '%s
+' ' 4) Schema       9) Composer      l) Log'
+  printf '%s
+' ' 5) Patch (zip)  i) Inspection'
+  printf '
+'
+  printf '%s
+' ' 0) Exit'
+  printf '%s
+' ' r) Refresh'
+  printf '%s
+' ' -------------------------------'
+  printf '%s
+' ' Empty/space = exit'
 }
 
 read_choice() {
-  local first="" k="" buf=""
-
+  local first='' k='' buf=''
   IFS= read -rsn1 first 2>/dev/null || return 1
 
-  # Enter / Space => exit
-  if [[ "$first" == $'\n' || "$first" == $'\r' || "$first" == ' ' ]]; then
+  if [[ "$first" == $'
+' || "$first" == $'' || "$first" == ' ' ]]; then
     printf ''
     return 0
   fi
 
-  # digits: allow multi-digit input without Enter (short idle timeout)
   if [[ "$first" =~ [0-9] ]]; then
     buf="$first"
     while IFS= read -rsn1 -t 0.20 k 2>/dev/null; do
@@ -58,7 +89,8 @@ read_choice() {
         buf+="$k"
         continue
       fi
-      if [[ "$k" == $'\n' || "$k" == $'\r' ]]; then
+      if [[ "$k" == $'
+' || "$k" == $'' ]]; then
         break
       fi
       break
@@ -67,7 +99,6 @@ read_choice() {
     return 0
   fi
 
-  # letters like d/g/c/r/l
   printf '%s' "$first"
 }
 
@@ -94,22 +125,28 @@ dispatch() {
 
 menu_loop() {
   while true; do
-    clear
-    banner
     print_menu
-    printf '%s' " Select: "
+    printf '%s' ' Select: '
 
-    local line=""
+    local line=''
     line="$(read_choice || true)"
+    printf '
 
-    printf '\n\n'
+'
 
-    dispatch "${line:-}" || break
+    dispatch "$line" || break
   done
 }
 
 main() {
-  # allow: ./commanding.sh 6  |  ./commanding.sh 1332  |  ./commanding.sh g
+  case "${1:-}" in
+    --self-check)
+      shift || true
+      self_check "$@"
+      return $?
+      ;;
+  esac
+
   if [ $# -ge 1 ]; then
     dispatch "$1" || true
     return 0

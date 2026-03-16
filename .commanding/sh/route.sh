@@ -1,63 +1,124 @@
+#!/usr/bin/env bash
+# Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
+set -euo pipefail
+
+COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"}"
+export COMMANDING_DIR
+
+# shellcheck source=/dev/null
+source "$COMMANDING_DIR/lib/ui.sh"
+
+PROJECT_ROOT="$(detect_project_root)"
+CONSOLE_BIN="$PROJECT_ROOT/bin/console"
+
+require_command php || exit 1
+require_file "$CONSOLE_BIN" || exit 1
+require_command grep || exit 1
+
+run_route_command() {
+  local label="$1"
+  shift
+
+  (
+    cd "$PROJECT_ROOT"
+    run_logged "$label" php "$CONSOLE_BIN" "$@"
+  )
+}
+
+show_all_route() {
+  (
+    cd "$PROJECT_ROOT"
+    php "$CONSOLE_BIN" debug:router
+  )
+}
+
+show_route_detail() {
+  local route_name="$1"
+  (
+    cd "$PROJECT_ROOT"
+    php "$CONSOLE_BIN" debug:router --format=md --show-controllers "$route_name"
+  )
+}
+
+filter_route_partial() {
+  local pattern="$1"
+  (
+    cd "$PROJECT_ROOT"
+    php "$CONSOLE_BIN" debug:router --format=md --show-controllers | grep -E "(${pattern})|(^ --------------)|(^ Name)"
+  )
+}
+
+filter_route_exact() {
+  local route_name="$1"
+  (
+    cd "$PROJECT_ROOT"
+    php "$CONSOLE_BIN" debug:router --format=md --show-controllers | grep -E "(${route_name})|(^ --------------)|(^ Name)"
+  )
+}
+
 while true; do
-  clear
-  echo -e "\e[1m"
-  echo -e "   Routes Checker:"
-  echo -e "   -------------------"
-  echo -e "\e[0m \e[32m"
-  echo -e "   1 All routs"
-  echo -e "   2 Check Route access just by RouteName (guest access)"
-  echo -e "   3 Check Route access by RouteName and userName"
-  echo -e "   ------------------------"
-  echo -e "   4 All routs by filtering (partial) RouteName"
-  echo -e "   5 All routs by filtering (exact) RouteName"
-  echo -e '\e[0m \e[1m'
-  echo -e "   ------------------------"
-  echo -e "   0 Go back to main menu"
-  echo -e '\e[0m \e[32m'
+  ui_clear
+  ui_banner "Route"
 
-  read -r -n 1 -s -p "    Enter action number or press Space for Exit:" action
+  printf '%s\n' "Route Menu"
+  printf '%s\n' "----------"
+  printf '%s\n' "1) List all route"
+  printf '%s\n' "2) Show route detail by name"
+  printf '%s\n' "3) Filter route by partial name"
+  printf '%s\n' "4) Filter route by exact name"
+  printf '%s\n' "5) Open action log"
+  printf '%s\n' ""
+  printf '%s\n' "Space) Exit"
+  printf '%s'   "Choice: "
 
-  trimmed_action=$(echo $action | xargs)
+  action="$(ui_pick_key)"
+  printf '\n'
 
-  if [ -z "$trimmed_action" ]; then
-    bash
-  fi
+  exit_code=0
 
-  case $action in
-  1)
-    echo -e "    Routes..."
-    php bin/console debug:router
-    ;;
-  2)
-    echo -e "    Check Route access by routeName (guest access)..."
-    read -p "    Enter Route Name: " routeName
-    php bin/console debug:router --format=md --show-controllers $routeName
-    read -p "   Press Enter to continue..."
-    ;;
-  3)
-    echo -e "    Check Route access by routeName and user..."
-    read -p "    Enter Route Name: " routeName
-    read -p "    Enter User Name: " userName
-    php bin/console debug:router --format=md --show-controllers $routeName $userName
-    ;;
-  4)
-    echo ''
-    read -p "    Enter part of Route Name: " partialRouteName
-    php bin/console debug:router --format=md --show-controllers | grep -E "($partialRouteName)|(^ --------------)|(^ Name)"
-    ;;
-  5)
-    echo -e "Search Route by exact name..."
-    read -p "Enter exact Route Name: " exactRouteName
-    php bin/console debug:router --format=md --show-controllers | grep -E "($exactRouteName)|(^ --------------)|(^ Name)" | awk '{if (/^ /) {print "\t" $0} else if (/^ -/) {print "\n\t" $0} else {print}}'
-    ;;
-  0)
-    echo -e "Go back to main menu"
-    exit 0;
-    ;;
-
-  *) echo -e "\e[31m Incorrect\e[0m" ;;
+  case "${action:-}" in
+    1)
+      show_all_route || exit_code=$?
+      ;;
+    2)
+      route_name=""
+      read -r -p "Route name: " route_name || true
+      if [ -z "$route_name" ]; then
+        ui_warn "Route name is required."
+      else
+        show_route_detail "$route_name" || exit_code=$?
+      fi
+      ;;
+    3)
+      partial_name=""
+      read -r -p "Partial route name: " partial_name || true
+      if [ -z "$partial_name" ]; then
+        ui_warn "Partial route name is required."
+      else
+        filter_route_partial "$partial_name" || exit_code=$?
+      fi
+      ;;
+    4)
+      exact_name=""
+      read -r -p "Exact route name: " exact_name || true
+      if [ -z "$exact_name" ]; then
+        ui_warn "Exact route name is required."
+      else
+        filter_route_exact "$exact_name" || exit_code=$?
+      fi
+      ;;
+    5)
+      show_file "$(runtime_log_file)" || exit_code=$?
+      ;;
+    ""|0|q|Q)
+      exit 0
+      ;;
+    *)
+      ui_warn "Unknown action."
+      ;;
   esac
-  if [ $? -ne 0 ]; then
-    continue
-  fi
-done
+
+  ui_note "Exit code: $exit_code"
+  ui_pause_any
+ done

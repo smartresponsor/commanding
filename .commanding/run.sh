@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copyright (c) 2025 Oleksandr Tishchenko / Marketing America Corp
+# Source-of-truth: root script. Embedded dot copies are projections.
 
-# Load Git Bash environment (colors/prompt) BEFORE strict mode
 [ -f /etc/profile ] && . /etc/profile
 [ -f ~/.bashrc ] && . ~/.bashrc
 set -euo pipefail
@@ -9,16 +9,18 @@ set -euo pipefail
 COMMANDING_DIR="${COMMANDING_DIR:-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"}"
 export COMMANDING_DIR
 
+# shellcheck source=/dev/null
+source "$COMMANDING_DIR/lib/ui.sh"
+
 COMMANDING_SH_DIR="$COMMANDING_DIR/sh"
-COMMANDING="$COMMANDING_DIR/commanding.sh"
 
 pause() {
-  read -r -p "Press Enter to continue..." _ || true
-  return 0
+  ui_pause_any
 }
 
 fail() {
-  printf '%s\n' "${1:-Error}"
+  local message="${1:-Error}"
+  ui_error "$message"
   pause
   return 0
 }
@@ -27,19 +29,20 @@ resolve_script() {
   local action="${1:-}"
 
   case "$action" in
-    1) printf "%s" "$COMMANDING_SH_DIR/route.sh" ;;
-    2) printf "%s" "$COMMANDING_SH_DIR/server.sh" ;;
-    3) printf "%s" "$COMMANDING_SH_DIR/fixture.sh" ;;
-    4) printf "%s" "$COMMANDING_SH_DIR/schema.sh" ;;
-    5) printf "%s" "$COMMANDING_DIR/patch_zipper.sh" ;;
-    6) printf "%s" "$COMMANDING_SH_DIR/test.sh" ;;
-    7) printf "%s" "$COMMANDING_SH_DIR/docker.sh" ;;
-    8) printf "%s" "$COMMANDING_SH_DIR/migration.sh" ;;
-    9) printf "%s" "$COMMANDING_SH_DIR/composer.sh" ;;
-    g|G) printf "%s" "$COMMANDING_DIR/git/commanding.sh" ;;
-    l|L) printf "%s" "$COMMANDING_SH_DIR/log.sh" ;;
-    c|C) printf "%s" "$COMMANDING_SH_DIR/cache.sh" ;;
-    d|D) printf "%s" "$COMMANDING_SH_DIR/dot.sh" ;;
+    1) printf '%s' "$COMMANDING_SH_DIR/route.sh" ;;
+    2) printf '%s' "$COMMANDING_SH_DIR/server.sh" ;;
+    3) printf '%s' "$COMMANDING_SH_DIR/fixture.sh" ;;
+    4) printf '%s' "$COMMANDING_SH_DIR/schema.sh" ;;
+    5) printf '%s' "$COMMANDING_DIR/patch_zipper.sh" ;;
+    6) printf '%s' "$COMMANDING_SH_DIR/test.sh" ;;
+    7) printf '%s' "$COMMANDING_SH_DIR/docker.sh" ;;
+    8) printf '%s' "$COMMANDING_SH_DIR/migration.sh" ;;
+    9) printf '%s' "$COMMANDING_SH_DIR/composer.sh" ;;
+    i|I) printf '%s' "$COMMANDING_SH_DIR/inspection.sh" ;;
+    g|G) printf '%s' "$COMMANDING_DIR/git/commanding.sh" ;;
+    l|L) printf '%s' "$COMMANDING_SH_DIR/log.sh" ;;
+    c|C) printf '%s' "$COMMANDING_SH_DIR/cache.sh" ;;
+    d|D) printf '%s' "$COMMANDING_SH_DIR/dot.sh" ;;
     *) return 1 ;;
   esac
 }
@@ -53,13 +56,14 @@ ensure_target() {
 
 is_long_running() {
   case "${1:-}" in
-    2|w|W) return 0 ;; # server/worker
-    *)     return 1 ;;
+    2) return 0 ;;
+    *) return 1 ;;
   esac
 }
 
 run_short() {
-  local target="$1"; shift || true
+  local target="$1"
+  shift || true
 
   set +e
   bash "$target" "$@"
@@ -67,7 +71,7 @@ run_short() {
   set -e
 
   if [ $status -ne 0 ]; then
-    printf '\n%s\n' "Command failed (exit=$status)"
+    ui_error "Command failed (exit=$status)"
   fi
 
   pause
@@ -75,13 +79,15 @@ run_short() {
 }
 
 run_long() {
-  local target="$1"; shift || true
+  local target="$1"
+  shift || true
   bash "$target" "$@" || true
   return 0
 }
 
 single() {
-  local action="${1:-}"; shift || true
+  local action="${1:-}"
+  shift || true
   local target
 
   if ! target="$(resolve_script "$action")"; then
@@ -94,6 +100,8 @@ single() {
     return 0
   fi
 
+  log_action "run single: $action -> $target"
+
   if is_long_running "$action"; then
     run_long "$target" "$@"
   else
@@ -105,16 +113,17 @@ single() {
 
 chain() {
   local digits="${1:-}"
-  [ -n "$digits" ] || fail "Empty chain"
+  [ -n "$digits" ] || fail 'Empty chain'
 
   local i ch target status
   local len="${#digits}"
 
+  log_action "run chain: $digits"
+
   for (( i=0; i<len; i++ )); do
     ch="${digits:i:1}"
 
-    if [[ "$ch" == "0" ]]; then
-      # stop chain and return to menu
+    if [[ "$ch" == '0' ]]; then
       return 0
     fi
 
@@ -139,7 +148,7 @@ chain() {
     set -e
 
     if [ $status -ne 0 ]; then
-      printf '\n%s\n' "Chain step failed (step=$ch, exit=$status)"
+      ui_error "Chain step failed (step=$ch, exit=$status)"
       pause
       return 0
     fi
@@ -152,6 +161,11 @@ chain() {
 main() {
   local cmd="${1:-}"
   shift || true
+
+  if [ -z "$cmd" ]; then
+    fail 'No command provided to run.sh'
+    return 0
+  fi
 
   case "$cmd" in
     chain) chain "${1:-}" ;;

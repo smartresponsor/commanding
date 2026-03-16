@@ -1,0 +1,36 @@
+version: '3.9'
+
+volumes:
+  prom-data:
+    name: '${SR_COMPOSE_PROJECT:-sr}-prom-data'
+  grafana-data:
+    name: '${SR_COMPOSE_PROJECT:-sr}-grafana-data'
+
+services:
+  obs-prometheus:
+    image: prom/prometheus:v2.52.0
+    restart: unless-stopped
+    environment:
+      TZ: ${SR_TZ:-America/Chicago}
+    ports:
+      - '${SR_PROM_PORT:-9090}:9090'
+    volumes:
+      - prom-data:/prometheus
+      - ./service/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  obs-grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${SR_GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${SR_GRAFANA_PASS:-admin}
+      TZ: ${SR_TZ:-America/Chicago}
+    ports:
+      - '${SR_GRAFANA_PORT:-3000}:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - obs-prometheus
