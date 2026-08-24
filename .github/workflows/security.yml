@@ -1,0 +1,15 @@
+name: Security
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * 2'
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    uses: smartresponsor/console-mcp/.github/workflows/security-reusable.yml@master
